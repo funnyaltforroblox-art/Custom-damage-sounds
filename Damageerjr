@@ -21,18 +21,20 @@ makefolder(config.baseFolder .. "/low")
 makefolder(config.baseFolder .. "/medium")
 makefolder(config.baseFolder .. "/high")
 
--- Helper to retrieve all MP3 paths from a specific tier folder
+-- Helper to retrieve all MP3 and WAV paths from a specific tier folder
 local function getSoundPool(tier)
     local folderPath = config.baseFolder .. "/" .. tier
     local files = listfiles(folderPath)
-    local mp3Pool = {}
+    local soundPool = {}
     
     for _, path in ipairs(files) do
-        if path:sub(-4):lower() == ".mp3" then
-            table.insert(mp3Pool, path)
+        local extension = path:sub(-4):lower()
+        -- Accept both .mp3 and .wav extensions
+        if extension == ".mp3" or extension == ".wav" then
+            table.insert(soundPool, path)
         end
     end
-    return mp3Pool
+    return soundPool
 end
 
 -- Audio Player that picks a random file from the target pool
@@ -173,9 +175,9 @@ local medStatus = createLabel("Med Track Pool: Checking...", 155, MenuFrame, Col
 local highStatus = createLabel("High Track Pool: Checking...", 185, MenuFrame, Color3.fromRGB(255, 150, 150))
 
 local function refreshStatusLabels()
-    lowStatus.Text = "Low Track Pool: " .. #getSoundPool("low") .. " variations found"
-    medStatus.Text = "Med Track Pool: " .. #getSoundPool("medium") .. " variations found"
-    highStatus.Text = "High Track Pool: " .. #getSoundPool("high") .. " variations found"
+    lowStatus.Text = "Low Track Pool: " .. #getSoundPool("low") .. " tracks found"
+    medStatus.Text = "Med Track Pool: " .. #getSoundPool("medium") .. " tracks found"
+    highStatus.Text = "High Track Pool: " .. #getSoundPool("high") .. " tracks found"
 end
 refreshStatusLabels()
 
