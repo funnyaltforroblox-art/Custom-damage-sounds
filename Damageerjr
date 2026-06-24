@@ -3,7 +3,7 @@ local config = {
     baseFolder = "damage_sounds",
     lowThresh = 15,
     medThresh = 45,
-    volume = 1.0 -- Default Volume (1.0 = 100%)
+    volume = 1.0
 }
 
 -- Verify executor compatibility
@@ -48,7 +48,7 @@ local function playRandomDamageSound(tier)
     if success and assetId then
         local sound = Instance.new("Sound")
         sound.SoundId = assetId
-        sound.Volume = config.volume -- Uses the volume from config
+        sound.Volume = config.volume
         sound.Parent = game:GetService("SoundService")
         sound:Play()
         sound.Ended:Connect(function() sound:Destroy() end)
@@ -80,6 +80,9 @@ if player.Character then listenToHealth(player.Character) end
 player.CharacterAdded:Connect(listenToHealth)
 
 -- UI Setup
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+
 local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui") or player:WaitForChild("PlayerGui"))
 ScreenGui.ResetOnSpawn = false
 
@@ -89,6 +92,8 @@ DragButton.Position = UDim2.new(0.1, 0, 0.4, 0)
 DragButton.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
 DragButton.Text = "FX"
 DragButton.TextColor3 = Color3.fromRGB(255, 170, 0)
+DragButton.TextSize = 18
+DragButton.Font = Enum.Font.SourceSansBold
 Instance.new("UICorner", DragButton).CornerRadius = UDim.new(1, 0)
 Instance.new("UIStroke", DragButton).Color = Color3.fromRGB(255, 170, 0)
 
@@ -143,5 +148,46 @@ SaveBtn.MouseButton1Click:Connect(function()
     SaveBtn.Text = "Save & Apply"
 end)
 
--- Toggle Menu
-DragButton.MouseButton1Click:Connect(function() MenuFrame.Visible = not MenuFrame.Visible end)
+-- RESTORED MOBILE DRAGGING ENGINE
+local dragging, dragInput, dragStart, startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    local targetPosition = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    TweenService:Create(DragButton, TweenInfo.new(0.1), {Position = targetPosition}):Play()
+    MenuFrame.Position = UDim2.new(targetPosition.X.Scale, targetPosition.X.Offset + 70, targetPosition.Y.Scale, targetPosition.Y.Offset - 100)
+end
+
+DragButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = DragButton.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+DragButton.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+-- Toggle Menu on Tap (Only if not actively dragging)
+DragButton.MouseButton1Click:Connect(function()
+    if not dragging then
+        MenuFrame.Visible = not MenuFrame.Visible
+        if MenuFrame.Visible then updateStatus() end
+    end
+end)
