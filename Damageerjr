@@ -8,7 +8,7 @@ local config = {
 }
 
 -- Console Message
-print("UL")
+print("U2L")
 
 -- Verify executor compatibility
 if not makefolder or not getcustomasset or not isfile or not listfiles then
@@ -39,8 +39,9 @@ local function updateSoundPool(tier)
     local files = listfiles(folderPath)
     local pool = {}
     for _, path in ipairs(files) do
-        local ext = path:sub(-4):lower()
-        if ext == ".mp3" or ext == ".wav" then
+        local ext4 = path:sub(-4):lower()
+        local ext5 = path:sub(-5):lower()
+        if ext4 == ".mp3" or ext4 == ".wav" or ext4 == ".ogg" or ext5 == ".ogg" then
             table.insert(pool, path)
         end
     end
