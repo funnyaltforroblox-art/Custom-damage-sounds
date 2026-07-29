@@ -1,8 +1,8 @@
 -- Global Configuration
 local config = {
     baseFolder = "damage_sounds",
-    lowThresh = 15,
-    medThresh = 45,
+    lowThresh = 30,
+    medThresh = 70,
     volume = 1.0,
     rescanInterval = 3 -- Check for new files every 3 seconds
 }
