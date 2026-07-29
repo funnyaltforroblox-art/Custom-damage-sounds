@@ -3,7 +3,8 @@ local config = {
     baseFolder = "damage_sounds",
     lowThresh = 15,
     medThresh = 45,
-    volume = 1.0
+    volume = 1.0,
+    rescanInterval = 3 -- Check for new files every 3 seconds
 }
 
 -- Verify executor compatibility
@@ -22,23 +23,36 @@ makefolder(config.baseFolder .. "/low")
 makefolder(config.baseFolder .. "/medium")
 makefolder(config.baseFolder .. "/high")
 
--- Helper to retrieve valid sound paths
-local function getSoundPool(tier)
+-- Sound Pool Cache
+local soundPools = {
+    low = {},
+    medium = {},
+    high = {}
+}
+
+-- Helper to retrieve valid sound paths and update the cache
+local function updateSoundPool(tier)
     local folderPath = config.baseFolder .. "/" .. tier
     local files = listfiles(folderPath)
-    local soundPool = {}
+    local pool = {}
     for _, path in ipairs(files) do
         local ext = path:sub(-4):lower()
         if ext == ".mp3" or ext == ".wav" then
-            table.insert(soundPool, path)
+            table.insert(pool, path)
         end
     end
-    return soundPool
+    soundPools[tier] = pool
+    return pool
 end
+
+-- Initial population of sound pools
+updateSoundPool("low")
+updateSoundPool("medium")
+updateSoundPool("high")
 
 -- Audio Player
 local function playRandomDamageSound(tier)
-    local pool = getSoundPool(tier)
+    local pool = soundPools[tier] or {}
     if #pool == 0 then return end
     
     local randomTrackPath = pool[math.random(1, #pool)]
@@ -127,9 +141,23 @@ statusLabel.Size = UDim2.new(1, 0, 0, 80); statusLabel.Position = UDim2.new(0, 0
 statusLabel.BackgroundTransparency = 1; statusLabel.TextColor3 = Color3.fromRGB(200,200,200)
 
 local function updateStatus()
-    statusLabel.Text = string.format("L: %d | M: %d | H: %d\nTracks Loaded", #getSoundPool("low"), #getSoundPool("medium"), #getSoundPool("high"))
+    statusLabel.Text = string.format("L: %d | M: %d | H: %d\nTracks Loaded", #soundPools.low, #soundPools.medium, #soundPools.high)
 end
-updateStatus()
+
+-- Automatic Directory Rescanner
+task.spawn(function()
+    while true do
+        updateSoundPool("low")
+        updateSoundPool("medium")
+        updateSoundPool("high")
+        
+        if MenuFrame.Visible then
+            updateStatus()
+        end
+        
+        task.wait(config.rescanInterval)
+    end
+end)
 
 -- Save Button
 local SaveBtn = Instance.new("TextButton", MenuFrame)
@@ -142,13 +170,19 @@ SaveBtn.MouseButton1Click:Connect(function()
     config.medThresh = tonumber(medBox.Text) or config.medThresh
     config.volume = math.clamp(tonumber(volBox.Text) or 1, 0, 5)
     volBox.Text = tostring(config.volume)
+    
+    -- Force rescan immediately on save
+    updateSoundPool("low")
+    updateSoundPool("medium")
+    updateSoundPool("high")
     updateStatus()
+    
     SaveBtn.Text = "Saved!"
     task.wait(1)
     SaveBtn.Text = "Save & Apply"
 end)
 
--- RESTORED MOBILE DRAGGING ENGINE
+-- Mobile Dragging Engine
 local dragging, dragInput, dragStart, startPos
 
 local function update(input)
@@ -184,10 +218,15 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- Toggle Menu on Tap (Only if not actively dragging)
+-- Toggle Menu on Tap
 DragButton.MouseButton1Click:Connect(function()
     if not dragging then
         MenuFrame.Visible = not MenuFrame.Visible
-        if MenuFrame.Visible then updateStatus() end
+        if MenuFrame.Visible then 
+            updateSoundPool("low")
+            updateSoundPool("medium")
+            updateSoundPool("high")
+            updateStatus() 
+        end
     end
 end)
