@@ -1,11 +1,14 @@
 -- Global Configuration
 local config = {
     baseFolder = "damage_sounds",
-    lowThresh = 30,
-    medThresh = 70,
+    lowThresh = 15,
+    medThresh = 45,
     volume = 1.0,
     rescanInterval = 3 -- Check for new files every 3 seconds
 }
+
+-- Console Message
+print("UL")
 
 -- Verify executor compatibility
 if not makefolder or not getcustomasset or not isfile or not listfiles then
