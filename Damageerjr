@@ -78,41 +78,75 @@ end
 
 -- Monitor Character Health & Censor Bar Status
 local player = game:GetService("Players").LocalPlayer
+local camera = workspace.CurrentCamera
+local RunService = game:GetService("RunService")
+
 local censorEnabled = false
-local currentCensorPart = nil
+local censorFrame = nil
+local renderConnection = nil
+
+local function cleanupCensorBar()
+    if renderConnection then
+        renderConnection:Disconnect()
+        renderConnection = nil
+    end
+    if censorFrame then
+        censorFrame:Destroy()
+        censorFrame = nil
+    end
+end
 
 local function applyCensorBar(character)
-    if currentCensorPart then
-        currentCensorPart:Destroy()
-        currentCensorPart = nil
-    end
+    cleanupCensorBar()
     
     if not censorEnabled or not character then return end
 
     local head = character:WaitForChild("Head", 5)
-    if head then
-        -- Client-sided 3D Part attached to the front of the head
-        local bar = Instance.new("Part")
-        bar.Name = "CensorBarPart"
-        bar.Size = Vector3.new(2.1, 0.85, 0.2) -- Covers full width and face height of R6 head
-        bar.Color = Color3.new(0, 0, 0)
-        bar.Material = Enum.Material.SmoothPlastic
-        bar.CanCollide = false
-        bar.CastShadow = false
-        bar.Massless = true
-        
-        -- Position slightly in front of head center (-Z in local CFrame is Front)
-        bar.CFrame = head.CFrame * CFrame.new(0, 0.05, -0.45)
-        
-        -- Lock physics to the head
-        local weld = Instance.new("WeldConstraint")
-        weld.Part0 = head
-        weld.Part1 = bar
-        weld.Parent = bar
-        
-        bar.Parent = character
-        currentCensorPart = bar
-    end
+    if not head then return end
+
+    -- Create ScreenGui holder
+    local success, coreGui = pcall(function() return game:GetService("CoreGui") end)
+    local censorGui = Instance.new("ScreenGui")
+    censorGui.Name = "CensorBarGui"
+    censorGui.ResetOnSpawn = false
+    censorGui.Parent = success and coreGui or player:WaitForChild("PlayerGui")
+
+    -- 2D Screen-space Frame
+    local frame = Instance.new("Frame")
+    frame.BackgroundColor3 = Color3.new(0, 0, 0)
+    frame.BorderSizePixel = 0
+    frame.AnchorPoint = Vector2.new(0.5, 0.5)
+    frame.Visible = false
+    frame.Parent = censorGui
+
+    censorFrame = censorGui
+
+    -- Update 2D position and scale every frame based on camera perspective
+    renderConnection = RunService.RenderStepped:Connect(function()
+        if not head or not head.Parent then
+            cleanupCensorBar()
+            return
+        end
+
+        local headPos = head.Position
+        local screenPos, onScreen = camera:WorldToViewportPoint(headPos)
+
+        if onScreen then
+            -- Distance scaling calculation so the bar expands/shrinks naturally
+            local depth = math.max(screenPos.Z, 0.1)
+            local baseWidth = 100 -- Width multiplier
+            local baseHeight = 50 -- Height multiplier
+            
+            local scaledWidth = baseWidth / (depth * 0.1)
+            local scaledHeight = baseHeight / (depth * 0.1)
+
+            frame.Size = UDim2.new(0, scaledWidth, 0, scaledHeight)
+            frame.Position = UDim2.new(0, screenPos.X, 0, screenPos.Y)
+            frame.Visible = true
+        else
+            frame.Visible = false
+        end
+    end)
 end
 
 local function listenToHealth(character)
@@ -300,4 +334,4 @@ DragButton.MouseButton1Click:Connect(function()
         end
     end
 end)
-print("did it work")
+print("29fha")
