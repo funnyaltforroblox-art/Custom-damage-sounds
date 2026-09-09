@@ -73,8 +73,38 @@ local function playRandomDamageSound(tier)
     end
 end
 
--- Monitor Character Health
+-- Monitor Character Health & Censor Bar Status
 local player = game:GetService("Players").LocalPlayer
+local censorEnabled = false
+local currentCensorBar = nil
+
+local function applyCensorBar(character)
+    if currentCensorBar then
+        currentCensorBar:Destroy()
+        currentCensorBar = nil
+    end
+    
+    if not censorEnabled or not character then return end
+
+    local head = character:WaitForChild("Head", 5)
+    if head then
+        local billboard = Instance.new("BillboardGui")
+        billboard.Name = "CensorBar"
+        billboard.Adornee = head
+        billboard.Size = UDim2.new(1.8, 0, 0.45, 0)
+        billboard.StudsOffset = Vector3.new(0, 0.15, 0) -- Offset slightly to cover eyes
+        billboard.AlwaysOnTop = true -- Prevents clipping into the head mesh
+
+        local bar = Instance.new("Frame", billboard)
+        bar.Size = UDim2.new(1, 0, 1, 0)
+        bar.BackgroundColor3 = Color3.new(0, 0, 0)
+        bar.BorderSizePixel = 0
+
+        billboard.Parent = head
+        currentCensorBar = billboard
+    end
+end
+
 local function listenToHealth(character)
     local humanoid = character:WaitForChild("Humanoid", 10)
     if not humanoid then return end
@@ -94,8 +124,13 @@ local function listenToHealth(character)
     end)
 end
 
-if player.Character then listenToHealth(player.Character) end
-player.CharacterAdded:Connect(listenToHealth)
+local function onCharacterAdded(character)
+    listenToHealth(character)
+    applyCensorBar(character)
+end
+
+if player.Character then onCharacterAdded(player.Character) end
+player.CharacterAdded:Connect(onCharacterAdded)
 
 -- UI Setup
 local TweenService = game:GetService("TweenService")
@@ -116,7 +151,7 @@ Instance.new("UICorner", DragButton).CornerRadius = UDim.new(1, 0)
 Instance.new("UIStroke", DragButton).Color = Color3.fromRGB(255, 170, 0)
 
 local MenuFrame = Instance.new("Frame", ScreenGui)
-MenuFrame.Size = UDim2.new(0, 280, 0, 290)
+MenuFrame.Size = UDim2.new(0, 280, 0, 310) -- Increased height slightly for the new button
 MenuFrame.Position = UDim2.new(0.1, 70, 0.4, -100)
 MenuFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 MenuFrame.Visible = false
@@ -139,9 +174,29 @@ local lowBox = createRow("Low Damage Max:", config.lowThresh, 40)
 local medBox = createRow("Med Damage Max:", config.medThresh, 75)
 local volBox = createRow("Volume (0-5):", config.volume, 110)
 
+-- Censor Bar Toggle Button
+local CensorBtn = Instance.new("TextButton", MenuFrame)
+CensorBtn.Size = UDim2.new(1, -20, 0, 30); CensorBtn.Position = UDim2.new(0, 10, 0, 145)
+CensorBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+CensorBtn.Text = "Censor Bar: OFF"
+CensorBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+Instance.new("UICorner", CensorBtn).CornerRadius = UDim.new(0, 4)
+
+CensorBtn.MouseButton1Click:Connect(function()
+    censorEnabled = not censorEnabled
+    if censorEnabled then
+        CensorBtn.Text = "Censor Bar: ON"
+        CensorBtn.TextColor3 = Color3.fromRGB(100, 255, 100)
+    else
+        CensorBtn.Text = "Censor Bar: OFF"
+        CensorBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    end
+    applyCensorBar(player.Character)
+end)
+
 -- Status
 local statusLabel = Instance.new("TextLabel", MenuFrame)
-statusLabel.Size = UDim2.new(1, 0, 0, 80); statusLabel.Position = UDim2.new(0, 0, 0, 140)
+statusLabel.Size = UDim2.new(1, 0, 0, 60); statusLabel.Position = UDim2.new(0, 0, 0, 180)
 statusLabel.BackgroundTransparency = 1; statusLabel.TextColor3 = Color3.fromRGB(200,200,200)
 
 local function updateStatus()
@@ -234,3 +289,4 @@ DragButton.MouseButton1Click:Connect(function()
         end
     end
 end)
+print("wu2vav")
