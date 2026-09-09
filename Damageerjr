@@ -12,11 +12,14 @@ print("U2L")
 
 -- Verify executor compatibility
 if not makefolder or not getcustomasset or not isfile or not listfiles then
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Execution Error",
-        Text = "Your executor lacks required file system functions.",
-        Duration = 5
-    })
+    local pcallSuccess, starterGui = pcall(function() return game:GetService("StarterGui") end)
+    if pcallSuccess then
+        starterGui:SetCore("SendNotification", {
+            Title = "Execution Error",
+            Text = "Your executor lacks required file system functions.",
+            Duration = 5
+        })
+    end
     return
 end
 
@@ -88,20 +91,26 @@ local function applyCensorBar(character)
 
     local head = character:WaitForChild("Head", 5)
     if head then
-        local billboard = Instance.new("BillboardGui")
-        billboard.Name = "CensorBar"
-        billboard.Adornee = head
-        billboard.Size = UDim2.new(1.8, 0, 0.45, 0)
-        billboard.StudsOffset = Vector3.new(0, 0.15, 0) -- Offset slightly to cover eyes
-        billboard.AlwaysOnTop = true -- Prevents clipping into the head mesh
+        -- SurfaceGui attaches perfectly to the 3D geometry of the part
+        local surfaceGui = Instance.new("SurfaceGui")
+        surfaceGui.Name = "CensorBar"
+        surfaceGui.Adornee = head
+        surfaceGui.Face = Enum.NormalId.Front -- Locks it to the front face only
+        surfaceGui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
+        surfaceGui.PixelsPerStud = 50
+        surfaceGui.ZOffset = 0.05 -- Pushes it out slightly to prevent clipping with the head mesh
 
-        local bar = Instance.new("Frame", billboard)
-        bar.Size = UDim2.new(1, 0, 1, 0)
+        -- The black bar itself
+        local bar = Instance.new("Frame", surfaceGui)
+        bar.Size = UDim2.new(1, 0, 1, 0) -- 100% width and height, covers the entire face
         bar.BackgroundColor3 = Color3.new(0, 0, 0)
         bar.BorderSizePixel = 0
-
-        billboard.Parent = head
-        currentCensorBar = billboard
+        
+        -- Safely parent to CoreGui or PlayerGui so it remains strictly client-sided
+        local success, coreGui = pcall(function() return game:GetService("CoreGui") end)
+        surfaceGui.Parent = success and coreGui or player:WaitForChild("PlayerGui")
+        
+        currentCensorBar = surfaceGui
     end
 end
 
@@ -136,7 +145,8 @@ player.CharacterAdded:Connect(onCharacterAdded)
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
-local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui") or player:WaitForChild("PlayerGui"))
+local success, coreGui = pcall(function() return game:GetService("CoreGui") end)
+local ScreenGui = Instance.new("ScreenGui", success and coreGui or player:WaitForChild("PlayerGui"))
 ScreenGui.ResetOnSpawn = false
 
 local DragButton = Instance.new("TextButton", ScreenGui)
@@ -151,7 +161,7 @@ Instance.new("UICorner", DragButton).CornerRadius = UDim.new(1, 0)
 Instance.new("UIStroke", DragButton).Color = Color3.fromRGB(255, 170, 0)
 
 local MenuFrame = Instance.new("Frame", ScreenGui)
-MenuFrame.Size = UDim2.new(0, 280, 0, 310) -- Increased height slightly for the new button
+MenuFrame.Size = UDim2.new(0, 280, 0, 310)
 MenuFrame.Position = UDim2.new(0.1, 70, 0.4, -100)
 MenuFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
 MenuFrame.Visible = false
@@ -289,4 +299,4 @@ DragButton.MouseButton1Click:Connect(function()
         end
     end
 end)
-print("wu2vav")
+print("null oooo spooky")
